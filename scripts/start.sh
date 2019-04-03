@@ -65,11 +65,14 @@ keystone-manage credential_setup --keystone-user keystone --keystone-group keyst
 
 # Bootstrap Keystone service
 if [ -z $DB_EXISTS ]; then
-    keystone-manage bootstrap --bootstrap-password "$ADMIN_PASSWORD" \
-        --bootstrap-admin-url http://localhost:5000/v3/ \
-        --bootstrap-internal-url http://localhost:5000/v3/ \
-        --bootstrap-public-url http://localhost:5000/v3/ \
-        --bootstrap-region-id RegionOne
+    keystone-manage bootstrap \
+        --bootstrap-username $ADMIN_USERNAME \
+        --bootstrap-password "$ADMIN_PASSWORD" \
+        --bootstrap-project-name "$ADMIN_PROJECT_NAME" \
+        --bootstrap-admin-url http://$KEYSTONE_HOST:5000/v3/ \
+        --bootstrap-internal-url http://$KEYSTONE_HOST:5000/v3/ \
+        --bootstrap-public-url http://$KEYSTONE_HOST:5000/v3/ \
+        --bootstrap-region-id $REGION_ID
 fi
 
 # Restart Apache Service
@@ -78,21 +81,21 @@ service apache2 restart
 cat << EOF >> setup_env
 export OS_PROJECT_DOMAIN_NAME=default
 export OS_USER_DOMAIN_NAME=default
-export OS_PROJECT_NAME=admin
-export OS_USERNAME=admin
+export OS_PROJECT_NAME=$ADMIN_PROJECT_NAME
+export OS_USERNAME=$ADMIN_USERNAME
 export OS_PASSWORD=$ADMIN_PASSWORD
-export OS_AUTH_URL=http://localhost:5000/v3
+export OS_AUTH_URL=http://$KEYSTONE_HOST:5000/v3
 export OS_IDENTITY_API_VERSION=3
 export OS_IMAGE_API_VERSION=2
 EOF
 
 source setup_env
 
-# Create NBI User
+# Create User
 if [ -z $DB_EXISTS ]; then
-    openstack user create --domain default --password "$NBI_PASSWORD" nbi
-    openstack project create --domain default --description "Service Project" service
-    openstack role add --project service --user nbi admin
+    openstack user create --domain default --password "$PASSWORD" $USERNAME
+    openstack project create --domain default --description "Service Project" $SERVICE
+    openstack role add --project $SERVICE --user $USERNAME admin
 fi
 
 while ps -ef | grep -v grep | grep -q apache2
